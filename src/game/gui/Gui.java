@@ -44,7 +44,7 @@ import xadrezautomato.Global;
  * @author Petri Tuononen
  * @since 20/02/2010
  */
-public class Gui extends JPanel implements Runnable {
+public class Gui extends JPanel implements Runnable, MouseListener {
 
     private static final long serialVersionUID = -5154317893203520132L;
     //global variables
@@ -79,42 +79,8 @@ public class Gui extends JPanel implements Runnable {
     private JMenuItem menuItem4;
     private JMenuItem menuItem5;
     private JMenuItem menuItem6;
-        //SpeechToTextConverter recog = new SpeechToTextConverter();
+    SpeechToTextConverter recog = new SpeechToTextConverter();
 
-    private static final String ACOUSTIC_MODEL
-            = "resource:/speech/recognizer/en-us";
-    private static final String DICTIONARY_PATH
-            = "resource:/speech/recognizer/cmudict-en-us.dict";
-    private static final String GRAMMAR_PATH
-            = "resource:/speech/recognizer/";
-
-    LiveSpeechRecognizer recog;
-
-    private static final Map<Integer, String> ROW
-            = new HashMap<Integer, String>();
-
-    public String text = "";
-
-    static {
-        ROW.put(1, "one");
-        ROW.put(2, "two");
-        ROW.put(3, "three");
-        ROW.put(4, "four");
-        ROW.put(5, "five");
-        ROW.put(6, "six");
-        ROW.put(7, "seven");
-        ROW.put(8, "eight");
-    }
-
-    private static String parseRow(String comm) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 1; i <= 8; ++i) {
-            comm = comm.replaceAll(ROW.get(i), "" + i);
-        }
-
-        return comm;
-    }
 
     /**
      * Get move object.
@@ -351,7 +317,7 @@ public class Gui extends JPanel implements Runnable {
         aiVsAiMode = false;
         player = new Player();
 		//add mouse listener to the panel
-        //addMouseListener(this);
+        addMouseListener(this);
         //set panel size
         setSize(480, 400);
         Dimension d = new Dimension(getSizeX(), getSizeY());
@@ -405,7 +371,7 @@ public class Gui extends JPanel implements Runnable {
                 menu = new JMenu("File");
 
                 //---- menuItem4 ----
-                menuItem4 = new JMenuItem("Play Human VS Human SR");
+                menuItem4 = new JMenuItem("Play Human VS Human");
                 menuItem4.addActionListener(new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         playHumanVsHumanActionPerformed(e);
@@ -1108,7 +1074,7 @@ public class Gui extends JPanel implements Runnable {
                 //right mouse button pressed
                 case InputEvent.BUTTON3_MASK: {
 				//clear piece to move selection
-                    //setSrcSelected(false);
+                    setSrcSelected(false);
                     repaint();
                     break;
                 }
@@ -1208,8 +1174,8 @@ public class Gui extends JPanel implements Runnable {
         humanVsHumanMode = false;
         humanVsAiMode = true;
         repaint();
-//                recog = new SpeechToTextConverter();
-//                recog.startRecog();
+
+        //recog.createRecog();
     }
 
     /**
@@ -1246,56 +1212,7 @@ public class Gui extends JPanel implements Runnable {
         EventQueue.invokeLater(new Gui());
     }
 
-    public void createRecog() {
-        try {
-            Configuration configuration = new Configuration();
-            configuration.setAcousticModelPath(ACOUSTIC_MODEL);
-            configuration.setDictionaryPath(DICTIONARY_PATH);
-            configuration.setGrammarPath(GRAMMAR_PATH);
-            configuration.setUseGrammar(true);
-
-            configuration.setGrammarName("chess");
-
-            recog = new LiveSpeechRecognizer(configuration);
-
-        } catch (IOException ex) {
-            Logger.getLogger(SpeechToTextConverter.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
-
-    public void startRecog(LiveSpeechRecognizer recog) {
-
-        recog.startRecognition(true);
-        while (true) {
-
-            text = parseRow(recog.getResult().getHypothesis().replaceAll(" ", ""));
-            System.out.println(text);
-
-            if (!text.equals("") && !text.equals("<unk>")) {
-                Global.src = getSource();
-                Global.dest = getDest();
-                recog.stopRecognition();
-                break;
-
-            }
-        }
-    }
-
-    public String getSource() {
-        if (!text.equals("")) {
-            return text.replace("move", "").split("to")[0];
-        }
-        return null;
-    }
-
-    public String getDest() {
-        if (!text.equals("")) {
-            return text.replace("move", "").split("to")[1];
-        }
-        return null;
-    }
-
+    // método chamado ao apertar o microfone
     private void startCommand(ActionEvent e) {
 
         //identify which player turn it is
@@ -1306,35 +1223,33 @@ public class Gui extends JPanel implements Runnable {
             player = player2;
         }
 
-            //recog.startRecog();
-            createRecog();
-            startRecog(recog);
+        recog.createRecog();        
+        recog.startRecog();
 
-            setSelectedSrc(Global.src);
-            setSelectedDest(Global.dest);
+        setSelectedSrc(Global.src);
+        setSelectedDest(Global.dest);
 
-            if (isSrcSqValid(getSelectedSrc(), getMove(), board, player)) {
-                setSrcSelected(true);
+        if (isSrcSqValid(getSelectedSrc(), getMove(), board, player)) {
+            setSrcSelected(true);
+
+        } else {
+            Global.src = null;
+            JOptionPane.showMessageDialog(f, "Peça inválida.",
+                    "Erro Movimento", JOptionPane.PLAIN_MESSAGE);
+        }
+
+        if (isSrcSelected() && !isDestSelected()) {
+            if (isDestSqValid(getSelectedSrc(), getSelectedDest(), getMove(),
+                    board, player)) {
+                setDestSelected(true);
 
             } else {
-                Global.src = null;
-                JOptionPane.showMessageDialog(f, "Peça inválida.",
+                Global.dest = null;
+                JOptionPane.showMessageDialog(f, "Destino inválido.",
                         "Erro Movimento", JOptionPane.PLAIN_MESSAGE);
             }
+        }
 
-            if (isSrcSelected() && !isDestSelected()) {
-                if (isDestSqValid(getSelectedSrc(), getSelectedDest(), getMove(),
-                        board, player)) {
-                    setDestSelected(true);
-
-                } else {
-                    Global.dest = null;
-                    JOptionPane.showMessageDialog(f, "Destino inválido.",
-                            "Erro Movimento", JOptionPane.PLAIN_MESSAGE);
-                }
-            }
-
-            
         //if valid source and destination is selected
         if (isSrcSelected() && isDestSelected()) {
 
