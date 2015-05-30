@@ -1,0 +1,7 @@
+#JSGF V1.0;
+
+grammar chess;
+
+ public <command> = [move] <column> <row> to <column> <row>;
+ <column> = a | b | c | d | e | f | g | h;
+ <row> =  one | two | three | four | five | six | seven | eight;
